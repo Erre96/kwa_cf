@@ -1,6 +1,6 @@
 const functions = require('firebase-functions');
 const admin = require('firebase-admin');
-const cors = require('cors')({origin: true});
+//const cors = require('cors')({origin: true});
 
 admin.initializeApp();
 
@@ -22,11 +22,11 @@ const ERROR_RECEIVER_EMAIL_IS_SENDERS = 'ERROR_RECEIVER_EMAIL_IS_SENDERS';
 
 exports.sendPartnerRequest = functions.region('europe-west1').https.onCall(async (data, context) => {
 
-    if (context.auth === null) {
+    if (context.auth == null) {
         throw new functions.https.HttpsError('unauthenticated', ERROR_NOT_AUTHENTICATED);
     }
 
-    if (data === null || data.email === null) {
+    if (data == null || data.email == null) {
         throw new functions.https.HttpsError('invalid-argument', ERROR_RECEIVER_EMAIL_REQUIRED);
     }
 
@@ -40,8 +40,8 @@ exports.sendPartnerRequest = functions.region('europe-west1').https.onCall(async
     // todo: get name and email from auth instead of db
     //const senderName = context.auth.token.name || '';
     //const senderEmail = context.auth.token.email || '';
-    const senderEmail = senderDoc.data().email !== null ? senderDoc.data().email : '';
-    const senderName = senderDoc.data().name !== null ? senderDoc.data().name : '';
+    const senderEmail = senderDoc.data().email != null ? senderDoc.data().email : '';
+    const senderName = senderDoc.data().name != null ? senderDoc.data().name : '';
 
     const receiverEmail = data.email;
 
@@ -57,15 +57,15 @@ exports.sendPartnerRequest = functions.region('europe-west1').https.onCall(async
         await admin.firestore().runTransaction(async t => {
             const doc = await t.get(receiverRef);
             const uid = doc.id;
-            const email = doc.data().email !== null ? doc.data().email : '';
-            const name = doc.data().name !== null ? doc.data().name : '';
+            const email = doc.data().email != null ? doc.data().email : '';
+            const name = doc.data().name != null ? doc.data().name : '';
             const partner = doc.data().partner;
             const partnerRequestFrom = doc.data().partnerRequestFrom;
             const partnerRequestTo = doc.data().partnerRequestTo;
 
             if (partner != null) {
                 throw new Error(ERROR_RECEIVER_ALREADY_HAS_PARTNER);
-            } else if (partnerRequestFrom !== null || partnerRequestTo !== null) {
+            } else if (partnerRequestFrom != null || partnerRequestTo != null) {
                 throw new Error(ERROR_RECEIVER_HAS_PENDING_REQUEST);
             }
 
@@ -89,7 +89,7 @@ exports.sendPartnerRequest = functions.region('europe-west1').https.onCall(async
 
 exports.cancelPartnerRequest = functions.region('europe-west1').https.onCall(async (data, context) => {
 
-    if (context.auth === null) {
+    if (context.auth == null) {
         throw new functions.https.HttpsError('unauthenticated', ERROR_NOT_AUTHENTICATED);
     }
 
@@ -112,7 +112,7 @@ exports.cancelPartnerRequest = functions.region('europe-west1').https.onCall(asy
 
 exports.acceptPartnerRequest = functions.region('europe-west1').https.onCall(async (data, context) => {
 
-    if (context.auth === null) {
+    if (context.auth == null) {
         throw new functions.https.HttpsError('unauthenticated', ERROR_NOT_AUTHENTICATED);
     }
 
@@ -122,7 +122,7 @@ exports.acceptPartnerRequest = functions.region('europe-west1').https.onCall(asy
     try {
         await admin.firestore().runTransaction(async t => {
             const receiverDoc = await t.get(receiverRef);
-            const receiverName = receiverDoc.data().name !== null ? receiverDoc.data().name : '';
+            const receiverName = receiverDoc.data().name != null ? receiverDoc.data().name : '';
             const sender = receiverDoc.data().partnerRequestFrom;
             const senderRef = usersRef.doc(sender.uid);
 
@@ -146,7 +146,7 @@ exports.acceptPartnerRequest = functions.region('europe-west1').https.onCall(asy
 
 exports.rejectPartnerRequest = functions.region('europe-west1').https.onCall(async (data, context) => {
 
-    if (context.auth === null) {
+    if (context.auth == null) {
         throw new functions.https.HttpsError('unauthenticated', ERROR_NOT_AUTHENTICATED);
     }
 
@@ -167,9 +167,8 @@ exports.rejectPartnerRequest = functions.region('europe-west1').https.onCall(asy
     }
 });
 
-
 exports.RemoveAccountPair = functions.region('europe-west1').https.onCall(async (data, context) => {
-    if (context.auth === null) {
+    if (context.auth == null) {
         throw new functions.https.HttpsError('unauthenticated', ERROR_NOT_AUTHENTICATED);
     }
     const uid = context.auth.uid;
@@ -183,21 +182,21 @@ exports.RemoveAccountPair = functions.region('europe-west1').https.onCall(async 
     try {
         await admin.firestore().runTransaction(async t => {
 
-            if(userRef.partnerRequestTo !== null)
+            if(userRef.partnerRequestTo != null)
             {
                 const partnerRequestTo_uid = userRef.partnerRequestTo.uid;
                 const ref_uid = usersRef.doc(partnerRequestTo_uid);
                 t.delete(ref_uid.partnerRequestFrom);
             }
 
-            if(userRef.partnerRequestFrom !== null)
+            if(userRef.partnerRequestFrom != null)
             {
                 const partnerRequestFrom_uid = userRef.partnerRequestFrom.uid;
                 const ref_uid = usersRef.doc(partnerRequestFrom_uid);
                 t.delete(ref_uid.partnerRequestTo);
             }
 
-            if(userRef.partner !== null)
+            if(userRef.partner != null)
             {
                 const partner_uid = userRef.partner.uid;
                 const partnerRef = usersRef.doc(partner_uid);
