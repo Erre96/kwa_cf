@@ -167,6 +167,7 @@ exports.rejectPartnerRequest = functions.region('europe-west1').https.onCall(asy
     }
 });
 
+/*
 exports.RemoveAccountPair = functions.region('europe-west1').https.onCall(async (data, context) => {
     if (context.auth == null) {
         throw new functions.https.HttpsError('unauthenticated', ERROR_NOT_AUTHENTICATED);
@@ -214,3 +215,4 @@ exports.RemoveAccountPair = functions.region('europe-west1').https.onCall(async 
       }
       
 });
+*/
