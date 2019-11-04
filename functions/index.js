@@ -41,7 +41,8 @@ exports.sendPartnerRequest = functions.region('europe-west1').https.onCall(async
     //const senderName = context.auth.token.name || '';
     //const senderEmail = context.auth.token.email || '';
     const senderEmail = senderDoc.data().email != null ? senderDoc.data().email : '';
-    const senderName = senderDoc.data().name != null ? senderDoc.data().name : '';
+    const senderFirstName = senderDoc.data().firstName != null ? senderDoc.data().firstName : '';
+    const senderLastName = senderDoc.data().lastName != null ? senderDoc.data().lastName : '';
 
     const receiverEmail = data.email;
 
@@ -58,7 +59,8 @@ exports.sendPartnerRequest = functions.region('europe-west1').https.onCall(async
             const doc = await t.get(receiverRef);
             const uid = doc.id;
             const email = doc.data().email != null ? doc.data().email : '';
-            const name = doc.data().name != null ? doc.data().name : '';
+            const firstName = doc.data().firstName != null ? doc.data().firstName : '';
+            const lastName = doc.data().firstName != null ? doc.data().lastName : '';
             const partner = doc.data().partner;
             const partnerRequestFrom = doc.data().partnerRequestFrom;
             const partnerRequestTo = doc.data().partnerRequestTo;
@@ -69,8 +71,8 @@ exports.sendPartnerRequest = functions.region('europe-west1').https.onCall(async
                 throw new Error(ERROR_RECEIVER_HAS_PENDING_REQUEST);
             }
 
-            t.update(receiverRef, { partnerRequestFrom: { uid: senderUid, email: senderEmail, name: senderName } });
-            t.update(senderRef, { partnerRequestTo: { uid: uid, email: email, name: name } })
+            t.update(receiverRef, { partnerRequestFrom: { uid: senderUid, email: senderEmail, name: senderFirstName+" "+senderLastName } });
+            t.update(senderRef, { partnerRequestTo: { uid: uid, email: email, name: firstName+" "+lastName } })
         });
     } catch (e) {
         console.log(e);
@@ -122,7 +124,9 @@ exports.acceptPartnerRequest = functions.region('europe-west1').https.onCall(asy
     try {
         await admin.firestore().runTransaction(async t => {
             const receiverDoc = await t.get(receiverRef);
-            const receiverName = receiverDoc.data().name != null ? receiverDoc.data().name : '';
+            const receiverFirstName = receiverDoc.data().firstName != null ? receiverDoc.data().firstName : '';
+            const receiverLastName = receiverDoc.data().lastName != null ? receiverDoc.data().lastName : '';
+            const receiverEmail = receiverDoc.data().email != null ? receiverDoc.data().email : '';
             const sender = receiverDoc.data().partnerRequestFrom;
             const senderRef = usersRef.doc(sender.uid);
 
@@ -131,8 +135,8 @@ exports.acceptPartnerRequest = functions.region('europe-west1').https.onCall(asy
             t.set(coupleDataDoc, {owners: {[receiverUid]: true, [sender.uid]: true}});
             
             // add partner info and add reference to the created couple data doc
-            t.update(receiverRef, { partner: { uid: sender.uid, name: sender.name }, coupleDataRef : coupleDataDoc });
-            t.update(senderRef, { partner: { uid: receiverUid, name: receiverName }, coupleDataRef : coupleDataDoc });
+            t.update(receiverRef, { partner: { uid: sender.uid, name: sender.name, email : sender.email}, coupleDataRef : coupleDataDoc });
+            t.update(senderRef, { partner: { uid: receiverUid, name: receiverFirstName+" "+receiverLastName, email: receiverEmail }, coupleDataRef : coupleDataDoc });
             
             // delete requests
             t.update(receiverRef, { partnerRequestFrom: FieldValue.delete() });
