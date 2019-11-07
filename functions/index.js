@@ -8,6 +8,7 @@ const FieldValue = admin.firestore.FieldValue;
 
 const usersRef = admin.firestore().collection('users');
 const couplesRef = admin.firestore().collection('couples');
+const usersPremiumStatusRef = admin.firestore().collection('users_premium_status');
 
 //errors
 const ERROR_INTERNAL = 'ERROR_INTERNAL';
@@ -195,7 +196,7 @@ exports.removePartner = functions.region('europe-west1').https.onCall(async (dat
 
             t.update(partnerRef, { partner: FieldValue.delete(), coupleDataRef: FieldValue.delete() });
             t.update(userRef, { partner: FieldValue.delete(), coupleDataRef: FieldValue.delete() });
-            
+
             if (coupleDataRef) {
                 t.delete(coupleDataRef);
             }
@@ -211,52 +212,63 @@ exports.removePartner = functions.region('europe-west1').https.onCall(async (dat
     }
 });
 
-/*
-exports.RemoveAccountPair = functions.region('europe-west1').https.onCall(async (data, context) => {
+exports.deleteAccount = functions.region('europe-west1').https.onCall(async (data, context) => {
     if (context.auth == null) {
         throw new functions.https.HttpsError('unauthenticated', ERROR_NOT_AUTHENTICATED);
     }
-    const uid = context.auth.uid;
-    const userRef = usersRef.doc(uid);
-    const coupleRef = userRef.coupleDataRef;
 
-    const userDoc = await userRef.get();
-
-
+    const userUid = context.auth.uid;
+    const userRef = usersRef.doc(userUid);
 
     try {
         await admin.firestore().runTransaction(async t => {
+            const userDoc = await t.get(userRef);
 
-            if(userRef.partnerRequestTo != null)
-            {
-                const partnerRequestTo_uid = userRef.partnerRequestTo.uid;
-                const ref_uid = usersRef.doc(partnerRequestTo_uid);
-                t.delete(ref_uid.partnerRequestFrom);
+            // Incase the doc has already been deleted previously by this function then
+            // abort without error so that the auth.deleteUser function can run
+            if (!userDoc.exists) {
+                return;
             }
 
-            if(userRef.partnerRequestFrom != null)
-            {
-                const partnerRequestFrom_uid = userRef.partnerRequestFrom.uid;
-                const ref_uid = usersRef.doc(partnerRequestFrom_uid);
-                t.delete(ref_uid.partnerRequestTo);
+            const user = userDoc.data();
+
+            if (user.partner) {
+                const partnerRef = usersRef.doc(user.partner.uid);
+
+                t.update(partnerRef, {
+                    partner: FieldValue.delete(),
+                    coupleDataRef: FieldValue.delete(),
+                    loveLanguage: FieldValue.delete()
+                });
+
+                t.delete(user.coupleDataRef);
+
+                // delete premium status if any
+                t.delete(usersPremiumStatusRef.doc(user.partner.uid));
+                t.delete(usersPremiumStatusRef.doc(userUid));
             }
 
-            if(userRef.partner != null)
-            {
-                const partner_uid = userRef.partner.uid;
-                const partnerRef = usersRef.doc(partner_uid);
-                t.delete(partnerRef);
+            const partnerRequestTo = user.partnerRequestTo;
+            if (partnerRequestTo) {
+                const receiverRef = usersRef.doc(partnerRequestTo.uid);
+                t.update(receiverRef, { partnerRequestFrom: FieldValue.delete() });
+
             }
 
-        t.delete(userRef);
-        coupleRef.delete;
+            const partnerRequestFrom = user.partnerRequestFrom;
+            if (partnerRequestFrom) {
+                const senderRef = usersRef.doc(partnerRequestFrom.uid);
+                t.update(senderRef, { partnerRequestTo: FieldValue.delete() });
+            }
+
+            t.delete(userRef);
+
         });
-      }
-      catch(error) {
-        console.error(error);
-        // expected output: ReferenceError: nonExistentFunction is not defined
-        // Note - error messages will vary depending on browser
-      }
 
+        await admin.auth().deleteUser(userUid);
+
+    } catch (e) {
+        console.log(e);
+        throw new functions.https.HttpsError('internal', ERROR_INTERNAL);
+    }
 });
-*/
