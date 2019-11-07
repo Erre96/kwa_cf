@@ -17,6 +17,7 @@ const ERROR_RECEIVER_ALREADY_HAS_PARTNER = 'ERROR_RECEIVER_ALREADY_HAS_PARTNER';
 const ERROR_RECEIVER_HAS_PENDING_REQUEST = 'ERROR_RECEIVER_HAS_PENDING_REQUEST';
 const ERROR_RECEIVER_EMAIL_REQUIRED = 'ERROR_RECEIVER_EMAIL_REQUIRED';
 const ERROR_RECEIVER_EMAIL_IS_SENDERS = 'ERROR_RECEIVER_EMAIL_IS_SENDERS';
+const ERROR_USER_HAS_NO_PARTNER = 'ERROR_USER_HAS_NO_PARTNER';
 
 // TODO: when deleting user doc make sure to delete any active partner requests first
 
@@ -71,8 +72,8 @@ exports.sendPartnerRequest = functions.region('europe-west1').https.onCall(async
                 throw new Error(ERROR_RECEIVER_HAS_PENDING_REQUEST);
             }
 
-            t.update(receiverRef, { partnerRequestFrom: { uid: senderUid, email: senderEmail, name: senderFirstName+" "+senderLastName } });
-            t.update(senderRef, { partnerRequestTo: { uid: uid, email: email, name: firstName+" "+lastName } })
+            t.update(receiverRef, { partnerRequestFrom: { uid: senderUid, email: senderEmail, name: senderFirstName + " " + senderLastName } });
+            t.update(senderRef, { partnerRequestTo: { uid: uid, email: email, name: firstName + " " + lastName } })
         });
     } catch (e) {
         console.log(e);
@@ -132,12 +133,12 @@ exports.acceptPartnerRequest = functions.region('europe-west1').https.onCall(asy
 
             // create couple data document in Couples collection
             const coupleDataDoc = couplesRef.doc();
-            t.set(coupleDataDoc, {owners: {[receiverUid]: true, [sender.uid]: true}});
-            
+            t.set(coupleDataDoc, { owners: { [receiverUid]: true, [sender.uid]: true } });
+
             // add partner info and add reference to the created couple data doc
-            t.update(receiverRef, { partner: { uid: sender.uid, name: sender.name, email : sender.email}, coupleDataRef : coupleDataDoc });
-            t.update(senderRef, { partner: { uid: receiverUid, name: receiverFirstName+" "+receiverLastName, email: receiverEmail }, coupleDataRef : coupleDataDoc });
-            
+            t.update(receiverRef, { partner: { uid: sender.uid, name: sender.name, email: sender.email }, coupleDataRef: coupleDataDoc });
+            t.update(senderRef, { partner: { uid: receiverUid, name: receiverFirstName + " " + receiverLastName, email: receiverEmail }, coupleDataRef: coupleDataDoc });
+
             // delete requests
             t.update(receiverRef, { partnerRequestFrom: FieldValue.delete() });
             t.update(senderRef, { partnerRequestTo: FieldValue.delete() });
@@ -171,6 +172,45 @@ exports.rejectPartnerRequest = functions.region('europe-west1').https.onCall(asy
     }
 });
 
+exports.removePartner = functions.region('europe-west1').https.onCall(async (data, context) => {
+
+    if (context.auth == null) {
+        throw new functions.https.HttpsError('unauthenticated', ERROR_NOT_AUTHENTICATED);
+    }
+
+    const userUid = context.auth.uid;
+    const userRef = usersRef.doc(userUid);
+
+    try {
+        await admin.firestore().runTransaction(async t => {
+            const userDoc = await t.get(userRef);
+            const partner = userDoc.data().partner;
+
+            if (partner == null) {
+                throw new Error(ERROR_USER_HAS_NO_PARTNER);
+            }
+
+            const partnerRef = usersRef.doc(partner.uid);
+            const coupleDataRef = userDoc.data().coupleDataRef;
+
+            t.update(partnerRef, { partner: FieldValue.delete(), coupleDataRef: FieldValue.delete() });
+            t.update(userRef, { partner: FieldValue.delete(), coupleDataRef: FieldValue.delete() });
+            
+            if (coupleDataRef) {
+                t.delete(coupleDataRef);
+            }
+        });
+    } catch (e) {
+        console.log(e);
+        if (e instanceof Error) {
+            if (e.message === ERROR_USER_HAS_NO_PARTNER) {
+                throw new functions.https.HttpsError('not-found', ERROR_USER_HAS_NO_PARTNER);
+            }
+        }
+        throw new functions.https.HttpsError('internal', ERROR_INTERNAL);
+    }
+});
+
 /*
 exports.RemoveAccountPair = functions.region('europe-west1').https.onCall(async (data, context) => {
     if (context.auth == null) {
@@ -182,8 +222,8 @@ exports.RemoveAccountPair = functions.region('europe-west1').https.onCall(async 
 
     const userDoc = await userRef.get();
 
-    
-    
+
+
     try {
         await admin.firestore().runTransaction(async t => {
 
@@ -217,6 +257,6 @@ exports.RemoveAccountPair = functions.region('europe-west1').https.onCall(async 
         // expected output: ReferenceError: nonExistentFunction is not defined
         // Note - error messages will vary depending on browser
       }
-      
+
 });
 */
