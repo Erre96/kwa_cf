@@ -1,5 +1,6 @@
 const functions = require('firebase-functions');
 const admin = require('firebase-admin');
+const stripe = require('stripe')(functions.config().stripe.api_secret);
 //const cors = require('cors')({origin: true});
 
 admin.initializeApp();
@@ -19,8 +20,6 @@ const ERROR_RECEIVER_HAS_PENDING_REQUEST = 'ERROR_RECEIVER_HAS_PENDING_REQUEST';
 const ERROR_RECEIVER_EMAIL_REQUIRED = 'ERROR_RECEIVER_EMAIL_REQUIRED';
 const ERROR_RECEIVER_EMAIL_IS_SENDERS = 'ERROR_RECEIVER_EMAIL_IS_SENDERS';
 const ERROR_USER_HAS_NO_PARTNER = 'ERROR_USER_HAS_NO_PARTNER';
-
-// TODO: when deleting user doc make sure to delete any active partner requests first
 
 exports.sendPartnerRequest = functions.region('europe-west1').https.onCall(async (data, context) => {
 
@@ -271,4 +270,27 @@ exports.deleteAccount = functions.region('europe-west1').https.onCall(async (dat
         console.log(e);
         throw new functions.https.HttpsError('internal', ERROR_INTERNAL);
     }
+});
+
+const endpointSecret = functions.config().stripe.endpoint_secret;
+
+exports.onStripeCheckoutCompleted = functions.region('europe-west1').https.onRequest((request, response) => {
+    const sig = request.headers['stripe-signature'];
+
+    let event;
+
+    try {
+        event = stripe.webhooks.constructEvent(request.rawBody, sig, endpointSecret);
+    } catch (e) {
+        return response.status(400).send(`Webhook Error: ${e.message}`);
+    }
+
+    if (event.type === 'checkout.session.completed') {
+        const session = event.data.object;
+
+        //Fullfill the purchase...
+        console.log(session);
+    }
+
+    response.json({ received: true });
 });
