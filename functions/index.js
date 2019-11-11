@@ -2,6 +2,7 @@ const functions = require('firebase-functions');
 const admin = require('firebase-admin');
 const stripe = require('stripe')(functions.config().stripe.api_secret);
 //const cors = require('cors')({origin: true});
+const purchasePremium = require('./purchasePremium')
 
 admin.initializeApp();
 
@@ -272,25 +273,11 @@ exports.deleteAccount = functions.region('europe-west1').https.onCall(async (dat
     }
 });
 
-const endpointSecret = functions.config().stripe.endpoint_secret;
+exports.createStripeCheckoutSession = functions.region('europe-west1').https.onCall(async (data, context) => {
+    return (await purchasePremium.createStripeCheckoutSession(data, context, functions, stripe));
+});
 
 exports.onStripeCheckoutCompleted = functions.region('europe-west1').https.onRequest((request, response) => {
-    const sig = request.headers['stripe-signature'];
-
-    let event;
-
-    try {
-        event = stripe.webhooks.constructEvent(request.rawBody, sig, endpointSecret);
-    } catch (e) {
-        return response.status(400).send(`Webhook Error: ${e.message}`);
-    }
-
-    if (event.type === 'checkout.session.completed') {
-        const session = event.data.object;
-
-        //Fullfill the purchase...
-        console.log(session);
-    }
-
-    response.json({ received: true });
+    purchasePremium.onStripeCheckoutCompletedHandler(request, response, stripe,
+        functions.config().stripe.endpoint_secret, admin.firestore());
 });
