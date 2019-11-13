@@ -1,5 +1,6 @@
+
 exports.createStripeCheckoutSession = async function (data, context, functions, stripe) {
-    
+
     if (data == null || data.user == null || data.user.name == null ||
         data.user.email == null || data.user.uid == null || data.user.partnerUid == null) {
         throw new functions.https.HttpsError('invalid-argument', 'A user object with uid, name, email and partnerUid is required');
@@ -42,7 +43,7 @@ exports.createStripeCheckoutSession = async function (data, context, functions, 
     }
 }
 
-exports.onStripeCheckoutCompletedHandler = function (request, response, stripe, endpointSecret, database) {
+exports.onStripeCheckoutCompletedHandler = async function (request, response, stripe, endpointSecret, admin) {
     const sig = request.headers['stripe-signature'];
 
     let event;
@@ -55,15 +56,48 @@ exports.onStripeCheckoutCompletedHandler = function (request, response, stripe, 
 
     if (event.type === 'checkout.session.completed') {
         const session = event.data.object;
+        console.log(session);
+        // TODO: if there is no client_reference_id then 
+        //get uid from stripe customer object
 
         //Fullfill the purchase...
-        makeUserPremium();
+        await makeUserPremium(session.client_reference_id, admin);
     }
 
     response.json({ received: true });
 }
 
-function makeUserPremium(uid) {
-    console.log("maker user premium called");
-    // TODO: set user and partner to premium in db
+async function makeUserPremium(uid, admin) {
+    console.log("maker user premium called with uid: " + uid);
+    const db = admin.firestore();
+    const userRef = db.collection('users').doc(uid);
+
+    try {
+        await db.runTransaction(async t => {
+            const userDoc = await t.get(userRef);
+            const user = userDoc.data();
+            const partnerUid = user.partner.uid;
+
+            const since = admin.firestore.Timestamp.now();
+            const expiryDate = since.toDate();
+            expiryDate.setFullYear(expiryDate.getFullYear() + 1);
+            const expiry = admin.firestore.Timestamp.fromDate(expiryDate);
+
+            const usersPremiumStatusRef = db.collection('users_premium_status');
+            t.set(usersPremiumStatusRef.doc(uid), {
+                since: since,
+                expiry: expiry,
+                premium: true
+            });
+
+            t.set(usersPremiumStatusRef.doc(partnerUid), {
+                since: since,
+                expiry: expiry,
+                premium: true
+            });
+
+        });
+    } catch (e) {
+        console.log(e);
+    }
 }

@@ -279,5 +279,5 @@ exports.createStripeCheckoutSession = functions.region('europe-west1').https.onC
 
 exports.onStripeCheckoutCompleted = functions.region('europe-west1').https.onRequest((request, response) => {
     purchasePremium.onStripeCheckoutCompletedHandler(request, response, stripe,
-        functions.config().stripe.endpoint_secret, admin.firestore());
+        functions.config().stripe.endpoint_secret, admin);
 });
