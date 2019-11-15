@@ -3,6 +3,7 @@ const admin = require('firebase-admin');
 const stripe = require('stripe')(functions.config().stripe.api_secret);
 //const cors = require('cors')({origin: true});
 const purchasePremium = require('./purchasePremium')
+const revokePremium = require('./revokePremium');
 
 admin.initializeApp();
 
@@ -280,4 +281,8 @@ exports.createStripeCheckoutSession = functions.region('europe-west1').https.onC
 exports.onStripeCheckoutCompleted = functions.region('europe-west1').https.onRequest((request, response) => {
     purchasePremium.onStripeCheckoutCompletedHandler(request, response, stripe,
         functions.config().stripe.endpoint_secret, admin);
+});
+
+exports.revokePremium = functions.region('europe-west1').https.onCall(async (data, context) => {
+    return (await revokePremium.handler(data, context, admin.firestore()));
 });
