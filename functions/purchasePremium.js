@@ -17,7 +17,7 @@ exports.createStripeCheckoutSession = async function (data, context, functions, 
             }
         });
 
-        const sku = await stripe.skus.retrieve('sku_G9eu1VDO87OV9b');
+        const sku = await stripe.skus.retrieve('sku_GFxUm1mL3PQhUA');
 
         const session = await stripe.checkout.sessions.create({
             payment_method_types: ['card'],
