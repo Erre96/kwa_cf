@@ -31,8 +31,8 @@ exports.createStripeCheckoutSession = async function (data, context, functions, 
             customer: customer.id,
             client_reference_id: user.uid,
             // TODO: change urls when publish
-            success_url: 'http://localhost:3000/purchase_success',
-            cancel_url: 'http://localhost:3000',
+            success_url: 'https://karlekstanken-3c89c.web.app/purchase_success',
+            cancel_url: 'https://karlekstanken-3c89c.web.app',
         });
 
         return { sessionId: session.id };
