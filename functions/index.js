@@ -4,6 +4,7 @@ const stripe = require('stripe')(functions.config().stripe.api_secret);
 //const cors = require('cors')({origin: true});
 const purchasePremium = require('./purchasePremium')
 const revokePremium = require('./revokePremium');
+const accountCleanup = require('./accountCleanup');
 
 admin.initializeApp();
 
@@ -285,4 +286,10 @@ exports.onStripeCheckoutCompleted = functions.region('europe-west1').https.onReq
 
 exports.revokePremium = functions.region('europe-west1').https.onCall(async (data, context) => {
     return (await revokePremium.handler(data, context, admin.firestore()));
+});
+
+exports.accountCleanup = functions.region('europe-west1').https.onRequest(async (request, response) => {
+    await accountCleanup.handler(admin);
+    /* const users = await accountCleanup.handler(admin);
+    response.status(200).send(JSON.stringify(users)); */
 });
