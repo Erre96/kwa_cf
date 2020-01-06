@@ -1,4 +1,3 @@
-
 exports.createStripeCheckoutSession = async function (data, context, functions, stripe) {
 
     if (data == null || data.user == null || data.user.name == null ||
@@ -57,8 +56,6 @@ exports.onStripeCheckoutCompletedHandler = async function (request, response, st
     if (event.type === 'checkout.session.completed') {
         const session = event.data.object;
         console.log(session);
-        // TODO: if there is no client_reference_id then 
-        //get uid from stripe customer object
 
         //Fullfill the purchase...
         await makeUserPremium(session.client_reference_id, admin);
@@ -69,35 +66,26 @@ exports.onStripeCheckoutCompletedHandler = async function (request, response, st
 
 async function makeUserPremium(uid, admin) {
     console.log("maker user premium called with uid: " + uid);
-    const db = admin.firestore();
-    const userRef = db.collection('users').doc(uid);
+    const userRef = admin.firestore().collection('users').doc(uid);
 
     try {
-        await db.runTransaction(async t => {
-            const userDoc = await t.get(userRef);
-            const user = userDoc.data();
-            const partnerUid = user.partner.uid;
+        const userDoc = await userRef.get();
+        const user = userDoc.data();
 
-            const since = admin.firestore.Timestamp.now();
-            const expiryDate = since.toDate();
-            expiryDate.setFullYear(expiryDate.getFullYear() + 1);
-            const expiry = admin.firestore.Timestamp.fromDate(expiryDate);
+        const since = admin.firestore.Timestamp.now();
+        const expiry = admin.firestore.Timestamp.now().toDate();
+        expiry.setFullYear(expiry.getFullYear() + 1);
 
-            const usersPremiumStatusRef = db.collection('users_premium_status');
-            t.set(usersPremiumStatusRef.doc(uid), {
-                since: since,
-                expiry: expiry,
-                premium: true
-            });
+        const claims = {
+            premium: {
+                since: since.toMillis(),
+                expiry: expiry.getTime()
+            }
+        };
 
-            t.set(usersPremiumStatusRef.doc(partnerUid), {
-                since: since,
-                expiry: expiry,
-                premium: true
-            });
-
-        });
+        await admin.auth().setCustomUserClaims(uid, claims);
+        await admin.auth().setCustomUserClaims(user.partner.uid, claims);
     } catch (e) {
-        console.log(e);
+        console.error(e);
     }
 }
