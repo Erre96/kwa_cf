@@ -288,8 +288,6 @@ exports.revokePremium = functions.region('europe-west1').https.onCall(async (dat
     return (await revokePremium.handler(data, context, admin.firestore()));
 });
 
-exports.accountCleanup = functions.region('europe-west1').https.onRequest(async (request, response) => {
+exports.accountCleanup = functions.region('europe-west1').pubsub.schedule('every day 00:15').onRun(async context => {
     await accountCleanup.handler(admin);
-    /* const users = await accountCleanup.handler(admin);
-    response.status(200).send(JSON.stringify(users)); */
 });
