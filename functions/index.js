@@ -284,8 +284,8 @@ exports.onStripeCheckoutCompleted = functions.region('europe-west1').https.onReq
         functions.config().stripe.endpoint_secret, admin);
 });
 
-exports.revokePremium = functions.region('europe-west1').https.onCall(async (data, context) => {
-    return (await revokePremium.handler(data, context, admin.firestore()));
+exports.revokePremium = functions.region('europe-west1').pubsub.schedule('every day 00:10').onRun(async context => {
+    await revokePremium.handler(admin);
 });
 
 exports.accountCleanup = functions.region('europe-west1').pubsub.schedule('every day 00:15').onRun(async context => {
