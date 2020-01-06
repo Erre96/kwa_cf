@@ -288,6 +288,6 @@ exports.revokePremium = functions.region('europe-west1').pubsub.schedule('every 
     await revokePremium.handler(admin);
 });
 
-exports.accountCleanup = functions.region('europe-west1').pubsub.schedule('every day 00:15').onRun(async context => {
+exports.accountCleanup = functions.region('europe-west1').pubsub.schedule('every day 00:20').onRun(async context => {
     await accountCleanup.handler(admin);
 });
