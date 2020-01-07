@@ -223,6 +223,7 @@ exports.deleteAccount = functions.region('europe-west1').https.onCall(async (dat
     const userRef = usersRef.doc(userUid);
 
     try {
+        let partnerUid;
         await admin.firestore().runTransaction(async t => {
             const userDoc = await t.get(userRef);
 
@@ -235,19 +236,11 @@ exports.deleteAccount = functions.region('europe-west1').https.onCall(async (dat
             const user = userDoc.data();
 
             if (user.partner) {
-                const partnerRef = usersRef.doc(user.partner.uid);
+                partnerUid = user.partner.uid;
+                const partnerRef = usersRef.doc(partnerUid);
 
-                t.update(partnerRef, {
-                    partner: FieldValue.delete(),
-                    coupleDataRef: FieldValue.delete(),
-                    loveLanguage: FieldValue.delete()
-                });
-
+                t.delete(partnerRef);
                 t.delete(user.coupleDataRef);
-
-                // delete premium status if any
-                t.delete(usersPremiumStatusRef.doc(user.partner.uid));
-                t.delete(usersPremiumStatusRef.doc(userUid));
             }
 
             const partnerRequestTo = user.partnerRequestTo;
@@ -264,10 +257,12 @@ exports.deleteAccount = functions.region('europe-west1').https.onCall(async (dat
             }
 
             t.delete(userRef);
-
         });
 
         await admin.auth().deleteUser(userUid);
+        if (partnerUid) {
+            await admin.auth().deleteUser(partnerUid);
+        }
 
     } catch (e) {
         console.log(e);
