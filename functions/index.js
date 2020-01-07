@@ -279,10 +279,10 @@ exports.onStripeCheckoutCompleted = functions.region('europe-west1').https.onReq
         functions.config().stripe.endpoint_secret, admin);
 });
 
-exports.revokePremium = functions.region('europe-west1').pubsub.schedule('every day 00:10').onRun(async context => {
+exports.revokePremium = functions.region('europe-west1').pubsub.schedule('every day 00:10').timeZone('Europe/Stockholm').onRun(async context => {
     await revokePremium.handler(admin);
 });
 
-exports.accountCleanup = functions.region('europe-west1').pubsub.schedule('every day 00:20').onRun(async context => {
+exports.accountCleanup = functions.region('europe-west1').pubsub.schedule('every day 00:20').timeZone('Europe/Stockholm').onRun(async context => {
     await accountCleanup.handler(admin);
 });
