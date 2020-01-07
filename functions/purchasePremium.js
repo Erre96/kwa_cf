@@ -66,7 +66,8 @@ exports.onStripeCheckoutCompletedHandler = async function (request, response, st
 
 async function makeUserPremium(uid, admin) {
     console.log("maker user premium called with uid: " + uid);
-    const userRef = admin.firestore().collection('users').doc(uid);
+    const usersRef = admin.firestore().collection('users');
+    const userRef = usersRef.doc(uid);
 
     try {
         const userDoc = await userRef.get();
@@ -85,6 +86,10 @@ async function makeUserPremium(uid, admin) {
 
         await admin.auth().setCustomUserClaims(uid, claims);
         await admin.auth().setCustomUserClaims(user.partner.uid, claims);
+
+        // Tells client to get updated custom claims and update UI
+        await usersRef.doc(uid).update({ shouldRefreshIdToken: true });
+        await usersRef.doc(user.partner.uid).update({ shouldRefreshIdToken: true });
     } catch (e) {
         console.error(e);
     }
