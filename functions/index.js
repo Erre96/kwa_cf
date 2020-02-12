@@ -2,6 +2,7 @@ const functions = require('firebase-functions');
 const admin = require('firebase-admin');
 const stripe = require('stripe')(functions.config().stripe.api_secret);
 //const cors = require('cors')({origin: true});
+const addPartner = require('./addPartner');
 const purchasePremium = require('./purchasePremium')
 const revokePremium = require('./revokePremium');
 const accountCleanup = require('./accountCleanup');
@@ -14,7 +15,7 @@ const usersRef = admin.firestore().collection('users');
 const couplesRef = admin.firestore().collection('couples');
 const usersPremiumStatusRef = admin.firestore().collection('users_premium_status');
 
-//errors
+//TODO: use error codes from MyErrorCodes.js
 const ERROR_INTERNAL = 'ERROR_INTERNAL';
 const ERROR_NOT_AUTHENTICATED = 'ERROR_NOT_AUTHENTICATED';
 const ERROR_USER_NOT_FOUND = 'ERROR_USER_NOT_FOUND';
@@ -23,6 +24,10 @@ const ERROR_RECEIVER_HAS_PENDING_REQUEST = 'ERROR_RECEIVER_HAS_PENDING_REQUEST';
 const ERROR_RECEIVER_EMAIL_REQUIRED = 'ERROR_RECEIVER_EMAIL_REQUIRED';
 const ERROR_RECEIVER_EMAIL_IS_SENDERS = 'ERROR_RECEIVER_EMAIL_IS_SENDERS';
 const ERROR_USER_HAS_NO_PARTNER = 'ERROR_USER_HAS_NO_PARTNER';
+
+exports.addPartner = functions.region('europe-west1').https.onCall(async (data, context) => {
+    return (await addPartner.handler(data, context, admin, FieldValue, functions));
+});
 
 exports.sendPartnerRequest = functions.region('europe-west1').https.onCall(async (data, context) => {
 
