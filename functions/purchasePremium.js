@@ -1,10 +1,10 @@
 exports.createStripeCheckoutSession = async function (data, context, functions, stripe) {
 
     if (data == null || data.user == null || data.user.name == null ||
-        data.user.email == null || data.user.uid == null || data.user.partnerUid == null) {
-        throw new functions.https.HttpsError('invalid-argument', 'A user object with uid, name, email and partnerUid is required');
+        data.user.email == null || data.user.uid == null) {
+        throw new functions.https.HttpsError('invalid-argument', 'A user object with uid, name and email is required');
     }
-
+    
     try {
         const user = data.user;
         const customer = await stripe.customers.create({
@@ -12,7 +12,7 @@ exports.createStripeCheckoutSession = async function (data, context, functions, 
             name: user.name,
             metadata: {
                 app_user_uid: user.uid,
-                app_partner_uid: user.partnerUid
+                app_partner_uid: user.partnerUid ? user.partnerUid : null
             }
         });
 
@@ -85,11 +85,13 @@ async function makeUserPremium(uid, admin) {
         };
 
         await admin.auth().setCustomUserClaims(uid, claims);
-        await admin.auth().setCustomUserClaims(user.partner.uid, claims);
+        if (user.partner)
+            await admin.auth().setCustomUserClaims(user.partner.uid, claims);
 
         // Tells client to get updated custom claims and update UI
         await usersRef.doc(uid).update({ shouldRefreshIdToken: true });
-        await usersRef.doc(user.partner.uid).update({ shouldRefreshIdToken: true });
+        if (user.partner)
+            await usersRef.doc(user.partner.uid).update({ shouldRefreshIdToken: true });
     } catch (e) {
         console.error(e);
     }

@@ -1,7 +1,7 @@
 const functions = require('firebase-functions');
 const admin = require('firebase-admin');
 const stripe = require('stripe')(functions.config().stripe.api_secret);
-//const cors = require('cors')({origin: true});
+
 const addPartner = require('./addPartner');
 const purchasePremium = require('./purchasePremium')
 const revokePremium = require('./revokePremium');
@@ -13,7 +13,6 @@ const FieldValue = admin.firestore.FieldValue;
 
 const usersRef = admin.firestore().collection('users');
 const couplesRef = admin.firestore().collection('couples');
-const usersPremiumStatusRef = admin.firestore().collection('users_premium_status');
 
 //TODO: use error codes from MyErrorCodes.js
 const ERROR_INTERNAL = 'ERROR_INTERNAL';
@@ -29,6 +28,7 @@ exports.addPartner = functions.region('europe-west1').https.onCall(async (data, 
     return (await addPartner.handler(data, context, admin, FieldValue, functions));
 });
 
+// TODO: delete functions: sendPartnerRequest, cancelPartnerRequest, acceptPartnerRequest and rejectPartnerRequest
 exports.sendPartnerRequest = functions.region('europe-west1').https.onCall(async (data, context) => {
 
     if (context.auth == null) {
