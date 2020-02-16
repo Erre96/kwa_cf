@@ -15,26 +15,39 @@ exports.handler = async function (data, context, _admin, _FieldValue, functions)
         throw new functions.https.HttpsError('unauthenticated', MyErrorCodes.ERROR_NOT_AUTHENTICATED);
     }
 
-    if (data == null || data.email == null) {
-        throw new functions.https.HttpsError('invalid-argument', MyErrorCodes.ERROR_RECEIVER_EMAIL_REQUIRED);
+    if (data == null || (data.email == null && data.userId == null)) {
+        throw new functions.https.HttpsError('invalid-argument', MyErrorCodes.ERROR_RECEIVER_EMAIL_OR_UID_REQUIRED);
     }
 
-    if (data.email === context.auth.token.email) {
-        throw new functions.https.HttpsError('invalid-argument', MyErrorCodes.ERROR_RECEIVER_EMAIL_IS_SENDERS);
+    if ((data.email && data.email === context.auth.token.email) || (data.userId && data.userId === context.auth.uid)) {
+        throw new functions.https.HttpsError('invalid-argument', MyErrorCodes.ERROR_CAN_NOT_ADD_SELF);
     }
 
+    const partnerId = data.userId;
     const partnerEmail = data.email;
     const userUid = context.auth.uid;
 
     try {
-        const snapshots = await usersRef.where('email', '==', partnerEmail).get();
-        if (snapshots.empty) {
-            // no matching documents
-            throw new Error(MyErrorCodes.ERROR_USER_NOT_FOUND);
+        let partnerUid;
+        let partnerRef;
+
+        if (partnerId) {
+            const snapshot = await usersRef.doc(partnerId).get();
+            if (!snapshot.exists) {
+                throw new Error(MyErrorCodes.ERROR_USER_NOT_FOUND);
+            }
+            partnerUid = snapshot.id;
+            partnerRef = snapshot.ref;
+        } else {
+            const snapshots = await usersRef.where('email', '==', partnerEmail).get();
+            if (snapshots.empty) {
+                // no matching documents
+                throw new Error(MyErrorCodes.ERROR_USER_NOT_FOUND);
+            }
+            partnerUid = snapshots.docs[0].id;
+            partnerRef = snapshots.docs[0].ref;
         }
 
-        const partnerUid = snapshots.docs[0].id;
-        const partnerRef = snapshots.docs[0].ref;
         const userRef = usersRef.doc(userUid);
 
         await runTransaction(partnerRef, userRef);
