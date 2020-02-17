@@ -2,6 +2,7 @@ const functions = require('firebase-functions');
 const admin = require('firebase-admin');
 const stripe = require('stripe')(functions.config().stripe.api_secret);
 
+const sendInvite = require('./sendInvite');
 const addPartner = require('./addPartner');
 const purchasePremium = require('./purchasePremium')
 const revokePremium = require('./revokePremium');
@@ -23,6 +24,10 @@ const ERROR_RECEIVER_HAS_PENDING_REQUEST = 'ERROR_RECEIVER_HAS_PENDING_REQUEST';
 const ERROR_RECEIVER_EMAIL_REQUIRED = 'ERROR_RECEIVER_EMAIL_REQUIRED';
 const ERROR_RECEIVER_EMAIL_IS_SENDERS = 'ERROR_RECEIVER_EMAIL_IS_SENDERS';
 const ERROR_USER_HAS_NO_PARTNER = 'ERROR_USER_HAS_NO_PARTNER';
+
+exports.sendInvite = functions.region('europe-west1').https.onCall(async (data, context) => {
+    return (await sendInvite.handler(data, context, admin, functions));
+});
 
 exports.addPartner = functions.region('europe-west1').https.onCall(async (data, context) => {
     return (await addPartner.handler(data, context, admin, FieldValue, functions));
