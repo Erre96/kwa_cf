@@ -4,7 +4,7 @@ exports.createStripeCheckoutSession = async function (data, context, functions, 
         data.user.email == null || data.user.uid == null) {
         throw new functions.https.HttpsError('invalid-argument', 'A user object with uid, name and email is required');
     }
-    
+
     try {
         const user = data.user;
         const customer = await stripe.customers.create({
@@ -16,7 +16,7 @@ exports.createStripeCheckoutSession = async function (data, context, functions, 
             }
         });
 
-        const sku = await stripe.skus.retrieve('sku_GFxUm1mL3PQhUA');
+        const sku = await stripe.skus.retrieve(functions.config().stripe.sku_id);
 
         const session = await stripe.checkout.sessions.create({
             payment_method_types: ['card'],
@@ -29,9 +29,8 @@ exports.createStripeCheckoutSession = async function (data, context, functions, 
             }],
             customer: customer.id,
             client_reference_id: user.uid,
-            // TODO: change urls when publish
-            success_url: 'https://karlekstanken-3c89c.web.app/purchase_success',
-            cancel_url: 'https://karlekstanken-3c89c.web.app',
+            success_url: 'https://app.xn--krlekstanken-gcb.se/purchase_success',
+            cancel_url: 'https://app.xn--krlekstanken-gcb.se/',
         });
 
         return { sessionId: session.id };
