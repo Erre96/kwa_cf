@@ -29,8 +29,8 @@ exports.createStripeCheckoutSession = async function (data, context, functions, 
             }],
             customer: customer.id,
             client_reference_id: user.uid,
-            success_url: 'https://app.xn--krlekstanken-gcb.se/purchase_success',
-            cancel_url: 'https://app.xn--krlekstanken-gcb.se/',
+            success_url: 'https://app.karlekstanken.se/purchase_success',
+            cancel_url: 'https://app.karlekstanken.se',
         });
 
         return { sessionId: session.id };
