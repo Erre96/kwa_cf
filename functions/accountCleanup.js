@@ -63,6 +63,9 @@ async function getInactiveUsers(users = [], nextPageToken) {
             if (premium) {
                 return new Date(premium.expiry) <= Date.now();
             }
+            const admin = user.customClaims && user.customClaims.admin;
+            if (admin) return false;
+            
             return true;
         }
         return false;
